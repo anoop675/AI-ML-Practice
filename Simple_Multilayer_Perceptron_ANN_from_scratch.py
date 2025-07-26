@@ -22,6 +22,15 @@ Vanishing Gradient problem vs Exploding Gradients problem
 | **Common Causes**      | Sigmoid/tanh activations, Poor initialization, Too small LR Deep nets                | Poor weight initialization, High learning rate, No gradient clipping           |
 | **Solutions**          | ReLU or Leaky ReLU, Xavier/He init, BatchNorm, Residual connections                  | Gradient clipping, Normalize inputs, Smaller learning rate                     |
 | **Typical Domains**    | Deep feedforward nets, RNNs (esp. LSTMs, GRUs)                                       | Deep RNNs, CNNs, or deep MLPs with poor scaling                                |
+
+NOTE:
+    If A and B are matrices or column vectors (matrices with single column)
+    where A.shape = (n, k) and B.shape = (k, m),
+        A @ B (or) np.dot(A, B) (or) A.dot(B) performs matrix multiplication (provided the inner dimensions (k) are the same)
+
+    If A and B are matrices or column vectors
+    where A.shape = B.shape = (a, b)
+        A * B performs element-wise multiplication
 """
 
 import numpy as np
@@ -79,11 +88,11 @@ class NeuralNetwork:
 
     def forward_propagation(self, X):
         # input layer to hidden layer
-        self.z_hidden = np.dot(X, self.W_input_hidden) + self.b_hidden # computes z_hidden = W_input_hidden * X + b_hidden
+        self.z_hidden = X @ self.W_input_hidden + self.b_hidden # computes z_hidden = W_input_hidden * X + b_hidden
         self.a_hidden = sigmoid(self.z_hidden) # computes a_hidden = sigmoid(z_hidden)
 
         # hidden layer to output layer
-        self.z_out = np.dot(self.a_hidden, self.W_hidden_output) + self.b_output # computes z_out = W_hidden_out * a_hidden + b_out
+        self.z_out = self.a_hidden @ self.W_hidden_output + self.b_output # computes z_out = W_hidden_out * a_hidden + b_out
         self.a_out = sigmoid(self.z_out) # computes a_out = sigmoid(z_out)
 
         return self.a_out # ŷ = a_out
@@ -99,17 +108,17 @@ class NeuralNetwork:
         #dloss_da_out = mean_squared_error_derivative(y, self.a_out) # computes ∂L/∂ŷ for output layer NOTE: ŷ is nothing but a_out
         dloss_da_out = binary_cross_entropy_derivative(y, self.a_out) # computes ∂L/∂ŷ for output layer NOTE: ŷ is nothing but a_out
         da_out_dz_out = sigmoid_derivative(self.a_out) # computes ∂ŷ/∂z_out for output layer
-        dloss_dz_out = dloss_da_out * da_out_dz_out # computes ∂L/∂z_out = (∂L/∂ŷ) * (∂ŷ/∂z_out) for output layer
+        dloss_dz_out = dloss_da_out * da_out_dz_out # computes ∂L/∂z_out = (∂L/∂ŷ) * (∂ŷ/∂z_out) for output layer, NOTE: element wise multiplication of two matrices (column vectors) are done here, not matrix multiplication
 
-        self.dloss_dW_hidden_output = self.a_hidden.T.dot(dloss_dz_out) # computes ∂L/∂W_hidden_output
+        self.dloss_dW_hidden_output = self.a_hidden.T @ dloss_dz_out # computes ∂L/∂W_hidden_output
         self.dloss_db_output = np.sum(dloss_dz_out, axis=0, keepdims=True) # computes ∂L/∂b_output
 
         # Error to propagate to hidden layer
-        dloss_da_hidden = dloss_dz_out.dot(self.W_hidden_output.T) # computes ∂L/∂a_hidden = (∂L/∂z_out) * (∂z_out/∂a_hidden) for hidden layer. Instead of computing ∂z_out/∂a_hidden, we used (W_hidden_output)^T
+        dloss_da_hidden = dloss_dz_out @ self.W_hidden_output.T # computes ∂L/∂a_hidden = (∂L/∂z_out) * (∂z_out/∂a_hidden) for hidden layer. Instead of computing ∂z_out/∂a_hidden, we used (W_hidden_output)^T
         da_hidden_dz_hidden = sigmoid_derivative(self.a_hidden) # computes ∂a_hidden/∂z_hidden for hidden layer
-        dloss_dz_hidden = dloss_da_hidden * da_hidden_dz_hidden # computes ∂L/∂z_hidden = (∂L/∂a_hidden) * (∂a_hidden/∂z_hidden) for hidden layer
+        dloss_dz_hidden = dloss_da_hidden * da_hidden_dz_hidden # computes ∂L/∂z_hidden = (∂L/∂a_hidden) * (∂a_hidden/∂z_hidden) for hidden layer, NOTE: element wise multiplication of two matrices (column vectors) are done here, not matrix multiplication
 
-        self.dloss_dW_input_hidden = X.T.dot(dloss_dz_hidden)  # computes ∂L/∂W_input_hidden
+        self.dloss_dW_input_hidden = X.T @ dloss_dz_hidden  # computes ∂L/∂W_input_hidden
         self.dloss_db_hidden = np.sum(dloss_dz_hidden, axis=0, keepdims=True) # computes ∂L/∂b_hidden
         #--------------------------------------------
 
