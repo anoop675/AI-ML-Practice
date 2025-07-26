@@ -36,23 +36,26 @@ def sigmoid_derivative(x): # performs derivative on all values at once (outputs 
     return x * (1 - x)
 
 # Loss (Cost) function used is MSE (Mean Squared Error) => sum[(y - ŷ)^2] / n
-def mean_squared_error(y_actual, y_predicted): # these arguments are vectors
+def mean_squared_error(y_actual, y_predicted): # y_actual and y_predicted are vectors
     error = y_actual - y_predicted
     mse = np.mean(error ** 2)
+    print(mse.shape) # scalar value
     return mse # MSE is a scalar value here
 
-def binary_cross_entropy(y_true, y_pred, eps=1e-15):
+def binary_cross_entropy(y_true, y_pred, eps=1e-15): # y_true and y_pred are vectors
     y_pred = np.clip(y_pred, eps, 1 - eps)
-    return -np.mean(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
+    bce = -np.mean(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
+    print(bce.shape) # scalar value
+    return bce
 
 # derivative of MSE is -2(y - ŷ) NOTE: typically we drop the constant -2 (since it's absorbed by the learning rate in gradient descent algorithm)
-def mean_squared_error_derivative(y_actual, y_predicted):
-    d_error = y_actual - y_predicted
-    return d_error
+def mean_squared_error_derivative(y_actual, y_predicted): # y_actual and y_predicted are vectors
+    return y_actual - y_predicted # return a vector (or an array of the same shape as y_true and y_pred) of gradients, where each element corresponds to the ∂L/∂ŷ for each individual ŷ value
 
-def binary_cross_entropy_derivative(y_true, y_pred, eps=1e-15):
+def binary_cross_entropy_derivative(y_true, y_pred, eps=1e-15): # y_true and y_pred are vectors
     y_pred = np.clip(y_pred, eps, 1 - eps)
-    return (y_pred - y_true) / (y_pred * (1 - y_pred))  # ∂L/∂ŷ for BCE
+    return (y_pred - y_true) / (y_pred * (1 - y_pred))  # return a vector (or an array of the same shape as y_true and y_pred) of gradients, where each element corresponds to the ∂L/∂ŷ for each individual ŷ value
+
 
 class NeuralNetwork:
     def __init__(self, n_inputs, n_hidden, n_outputs, learning_rate=0.1):
@@ -97,7 +100,6 @@ class NeuralNetwork:
         dloss_da_out = binary_cross_entropy_derivative(y, self.a_out) # computes ∂L/∂ŷ for output layer NOTE: ŷ is nothing but a_out
         da_out_dz_out = sigmoid_derivative(self.a_out) # computes ∂ŷ/∂z_out for output layer
         dloss_dz_out = dloss_da_out * da_out_dz_out # computes ∂L/∂z_out = (∂L/∂ŷ) * (∂ŷ/∂z_out) for output layer
-        
         self.dloss_dW_hidden_output = self.a_hidden.T.dot(dloss_dz_out) # computes ∂L/∂W_hidden_output
         self.dloss_db_output = np.sum(dloss_dz_out, axis=0, keepdims=True) # computes ∂L/∂b_output
 
@@ -105,7 +107,6 @@ class NeuralNetwork:
         dloss_da_hidden = dloss_dz_out.dot(self.W_hidden_output.T) # computes ∂L/∂a_hidden = (∂L/∂z_out) * (∂z_out/∂a_hidden) for hidden layer. Instead of computing ∂z_out/∂a_hidden, we used (W_hidden_output)^T
         da_hidden_dz_hidden = sigmoid_derivative(self.a_hidden) # computes ∂a_hidden/∂z_hidden for hidden layer
         dloss_dz_hidden = dloss_da_hidden * da_hidden_dz_hidden # computes ∂L/∂z_hidden = (∂L/∂a_hidden) * (∂a_hidden/∂z_hidden) for hidden layer
-        
         self.dloss_dW_input_hidden = X.T.dot(dloss_dz_hidden)  # computes ∂L/∂W_input_hidden
         self.dloss_db_hidden = np.sum(dloss_dz_hidden, axis=0, keepdims=True) # computes ∂L/∂b_hidden
         #--------------------------------------------
