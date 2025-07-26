@@ -39,13 +39,13 @@ def sigmoid_derivative(x): # performs derivative on all values at once (outputs 
 def mean_squared_error(y_actual, y_predicted): # y_actual and y_predicted are vectors
     error = y_actual - y_predicted
     mse = np.mean(error ** 2)
-    print(mse.shape) # scalar value
+    #print(mse.shape) # scalar value
     return mse # MSE is a scalar value here
 
 def binary_cross_entropy(y_true, y_pred, eps=1e-15): # y_true and y_pred are vectors
     y_pred = np.clip(y_pred, eps, 1 - eps)
     bce = -np.mean(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
-    print(bce.shape) # scalar value
+    #print(bce.shape) # scalar value
     return bce
 
 # derivative of MSE is -2(y - ŷ) NOTE: typically we drop the constant -2 (since it's absorbed by the learning rate in gradient descent algorithm)
