@@ -97,23 +97,25 @@ class NeuralNetwork:
         dloss_da_out = binary_cross_entropy_derivative(y, self.a_out) # computes ∂L/∂ŷ for output layer NOTE: ŷ is nothing but a_out
         da_out_dz_out = sigmoid_derivative(self.a_out) # computes ∂ŷ/∂z_out for output layer
         dloss_dz_out = dloss_da_out * da_out_dz_out # computes ∂L/∂z_out = (∂L/∂ŷ) * (∂ŷ/∂z_out) for output layer
+        
+        self.dloss_dW_hidden_output = self.a_hidden.T.dot(dloss_dz_out) # computes ∂L/∂W_hidden_output
+        self.dloss_db_output = np.sum(dloss_dz_out, axis=0, keepdims=True) # computes ∂L/∂b_output
 
         # Error to propagate to hidden layer
         dloss_da_hidden = dloss_dz_out.dot(self.W_hidden_output.T) # computes ∂L/∂a_hidden = (∂L/∂z_out) * (∂z_out/∂a_hidden) for hidden layer. Instead of computing ∂z_out/∂a_hidden, we used (W_hidden_output)^T
         da_hidden_dz_hidden = sigmoid_derivative(self.a_hidden) # computes ∂a_hidden/∂z_hidden for hidden layer
         dloss_dz_hidden = dloss_da_hidden * da_hidden_dz_hidden # computes ∂L/∂z_hidden = (∂L/∂a_hidden) * (∂a_hidden/∂z_hidden) for hidden layer
+        
+        self.dloss_dW_input_hidden = X.T.dot(dloss_dz_hidden)  # computes ∂L/∂W_input_hidden
+        self.dloss_db_hidden = np.sum(dloss_dz_hidden, axis=0, keepdims=True) # computes ∂L/∂b_hidden
         #--------------------------------------------
 
         #-----------Gradient Descent part------------
         # Update weights and biases
-        self.dloss_dW_input_hidden = X.T.dot(dloss_dz_hidden) # computes ∂L/∂W_input_hidden
         self.W_input_hidden -= self.learning_rate * self.dloss_dW_input_hidden # computes W_input_hidden = W_input_hidden - learning_rate * (∂L/∂W_input_hidden)
-        self.dloss_db_hidden = np.sum(dloss_dz_hidden, axis=0, keepdims=True) # computes ∂L/∂b_hidden
         self.b_hidden -= self.learning_rate * self.dloss_db_hidden # computes b_hidden = b_hidden - learning_rate * (∂L/∂b_hidden)
 
-        self.dloss_dW_hidden_output = self.a_hidden.T.dot(dloss_dz_out) # computes ∂L/∂W_hidden_output
         self.W_hidden_output -= self.learning_rate * self.dloss_dW_hidden_output # computes W_hidden_output = W_hidden_output - learning_rate * (∂L/∂W_hidden_output)
-        self.dloss_db_output = np.sum(dloss_dz_out, axis=0, keepdims=True) # computes ∂L/∂b_output
         self.b_output -= self.learning_rate * self.dloss_db_output # computes b_output = b_output - learning_rate * (∂L/∂b_output)
         #--------------------------------------------
         # Return mean squared error for monitoring
