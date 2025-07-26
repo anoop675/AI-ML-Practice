@@ -100,6 +100,7 @@ class NeuralNetwork:
         dloss_da_out = binary_cross_entropy_derivative(y, self.a_out) # computes ∂L/∂ŷ for output layer NOTE: ŷ is nothing but a_out
         da_out_dz_out = sigmoid_derivative(self.a_out) # computes ∂ŷ/∂z_out for output layer
         dloss_dz_out = dloss_da_out * da_out_dz_out # computes ∂L/∂z_out = (∂L/∂ŷ) * (∂ŷ/∂z_out) for output layer
+
         self.dloss_dW_hidden_output = self.a_hidden.T.dot(dloss_dz_out) # computes ∂L/∂W_hidden_output
         self.dloss_db_output = np.sum(dloss_dz_out, axis=0, keepdims=True) # computes ∂L/∂b_output
 
@@ -107,6 +108,7 @@ class NeuralNetwork:
         dloss_da_hidden = dloss_dz_out.dot(self.W_hidden_output.T) # computes ∂L/∂a_hidden = (∂L/∂z_out) * (∂z_out/∂a_hidden) for hidden layer. Instead of computing ∂z_out/∂a_hidden, we used (W_hidden_output)^T
         da_hidden_dz_hidden = sigmoid_derivative(self.a_hidden) # computes ∂a_hidden/∂z_hidden for hidden layer
         dloss_dz_hidden = dloss_da_hidden * da_hidden_dz_hidden # computes ∂L/∂z_hidden = (∂L/∂a_hidden) * (∂a_hidden/∂z_hidden) for hidden layer
+
         self.dloss_dW_input_hidden = X.T.dot(dloss_dz_hidden)  # computes ∂L/∂W_input_hidden
         self.dloss_db_hidden = np.sum(dloss_dz_hidden, axis=0, keepdims=True) # computes ∂L/∂b_hidden
         #--------------------------------------------
@@ -163,15 +165,15 @@ class NeuralNetwork:
     # returns L2 norm (Euclidean norm) of all the model's gradients combined, to know how large the gradient updates are at the current step.
     # Lp norm = ||x||p = (sum(|x|^p)^(1/p). For a Euclidean norm, p = 2 (L2 norm). NOTE: x is a vector of gradient
     def get_gradient_norms(self):
-        gradients = [
+        list_of_gradients = [
             self.dloss_dW_input_hidden,
             self.dloss_db_hidden,
             self.dloss_dW_hidden_output,
             self.dloss_db_output
         ]
         total_norm = 0
-        for g in gradients:
-            param_norm = np.linalg.norm(g)
+        for gradients in list_of_gradients:
+            param_norm = np.linalg.norm(gradients)
             total_norm += param_norm ** 2
         return np.sqrt(total_norm)
 
