@@ -2,6 +2,8 @@
 Implementation of deep neural network (with single hidden layer), to make it capable of identifying any 5 bits with first and last bits as 1
 NOTE: This ∂L/∂ŷ should be read like (Loss gradient w.r.t output from output layer). Likewise for others
 
+NOTE: Convergence generally refers to the point where the model's performance (often measured by loss) stops improving significantly or reaches a stable state during training
+
 Types of Training modes (for this implementation we are using Batch Gradient Descent)
 | Type                       | Description                                    | Pros                            | Cons                          |
 | -------------------------- | ---------------------------------------------- | ------------------------------- | ----------------------------- |
@@ -100,26 +102,89 @@ class NeuralNetwork:
     def backward_propagation(self, X, y):
         # getting the loss for calculating its gradient wrt each parameter (as done by mean_squared_error_derivative())
         # and for evaluating the loss of the network after each epoch
-        #loss = mean_squared_error(y, self.a_out)
         loss = binary_cross_entropy(y, self.a_out) # MSE is causing vanishing gradients problem (due to sigmoid saturation), so using BCE loss for classification problems
 
         #--------------Chain Rule part---------------
         # Gradients for output layer
-        #dloss_da_out = mean_squared_error_derivative(y, self.a_out) # computes ∂L/∂ŷ for output layer NOTE: ŷ is nothing but a_out
+        # ∂L/∂W_hidden_output = (∂L/∂ŷ) * (∂ŷ/∂z_out) * (∂z_out/∂W_hidden_output)
+        # ∂L/∂b_output = (∂L/∂ŷ) * (∂ŷ/∂z_out) * (∂z_out/∂b_output)
+
         dloss_da_out = binary_cross_entropy_derivative(y, self.a_out) # computes ∂L/∂ŷ for output layer NOTE: ŷ is nothing but a_out
         da_out_dz_out = sigmoid_derivative(self.a_out) # computes ∂ŷ/∂z_out for output layer
         dloss_dz_out = dloss_da_out * da_out_dz_out # computes ∂L/∂z_out = (∂L/∂ŷ) * (∂ŷ/∂z_out) for output layer, NOTE: element wise multiplication of two matrices (column vectors) are done here, not matrix multiplication
 
-        self.dloss_dW_hidden_output = self.a_hidden.T @ dloss_dz_out # computes ∂L/∂W_hidden_output
+        self.dloss_dW_hidden_output = self.a_hidden.T @ dloss_dz_out # computes ∂L/∂W_hidden_output = (∂L/∂z_out) * (∂z_out/∂W_hidden_output)
         self.dloss_db_output = np.sum(dloss_dz_out, axis=0, keepdims=True) # computes ∂L/∂b_output
+        '''
+        NOTE : 
+            In line 116, Why is a_hidden.T used instead of ∂z_out/∂W_hidden_output ?
+            
+            Solution:
+                We know according to chain rule, 
+                >>> ∂L/∂W_hidden_output = (∂L/∂z_out) * (∂z_out/∂W_hidden_output) ---> (1),
+                
+                To find: ∂z_out/∂W_hidden_output from (1),
+                
+                We know, 
+                >>> z_out = a_hidden @ W_hidden_output + b_output (considering the equivalence of inner dimensions of a_hidden and W_hidden_output for dot product) 
+                Differentiating wrt W_hidden_output on both sides, we get,
+                >>> ∂z_out/∂W_hidden_output = ∂(a_hidden @ W_hidden_output)/∂W_hidden_output + ∂b_output/∂W_hidden_output
+                >>> ∂z_out/∂W_hidden_output = a_hidden^T + 0 
+                >>> ∂z_out/∂W_hidden_output = a_hidden^T ---> (2)    
+                since,
+                    ∂(A @ B)/∂B = A^T in vector calculus, provided A is a vector and B is a matrix and @ means dot product,
+                    ∂(X)/∂Y leads to constant in this cause a null vector 0, provided A is a vector and B is a matrix 
+                
+                Substituting (2) in (1),
+                >>> ∂L/∂W_hidden_output = a_hidden^T @ (∂L/∂z_out) (considering the equivalence of inner dimensions of a_hidden^T and ∂L/∂z_out for dot product) 
+        
+            In line 117, Why is ∂L/∂b_output = np.sum(∂L/∂z_out, axis=0, keepdims=True) ?
+            
+            Solution:
+                We know according to chain rule,
+                >>> ∂L/∂b_output = (∂L/∂z_out) * (∂z_out/∂b_output) ---> (1),
+                
+                To find: ∂z_out/∂b_output from (1)
+                
+                We know z_out = a_hidden @ W_hidden_output + b_output (considering the equivalence of inner dimensions of a_hidden and W_hidden_output for dot product) 
+                Differentiating wrt b_output on both sides, we get,
+                >>> ∂z_out/∂b_output = ∂(a_hidden @ W_hidden_output)/∂b_output + ∂b_output/∂b_output
+                >>> ∂z_out/∂b_output = 0 + 1
+                >>> ∂z_out/∂b_output = 1 ---> (2)
+                 since,
+                    ∂(A)/∂B = 0 (null vector) , provided A is a vector and B is a vector,
+                    ∂(B)/∂B = 1 (ones vector) , provided A is a vector and B is a vector
+                
+                Substituting (2) in (1),
+                >>> ∂L/∂b_output = ∂L/∂z_out
+                Because dloss_dz_out contains per-sample gradients. But the bias b_output which is one bias vector is shared across all samples in the batch (broadcasted).
+                So to compute the gradient of the total loss w.r.t. the bias (∂L/∂b_output), we need to aggregate the individual sample gradients (∂L/∂z_out).
+                Hence,
+                >>> ∂L/∂b_output = sum( ∂L/∂z_out (i) ) where m is the number of rows
+                                  i to m
+        '''
 
         # Error to propagate to hidden layer
+        # ∂L/∂W_input_hidden = (∂L/∂ŷ) * (∂ŷ/∂z_out) * (∂z_out/∂a_hidden) * (∂a_hidden/∂z_hidden) * (∂z_hidden/∂W_input_hidden)
+        # ∂L/∂b_hidden = (∂L/∂ŷ) * (∂ŷ/∂z_out) * (∂z_out/∂a_hidden) * (∂a_hidden/∂z_hidden) * (∂z_hidden/∂b_hidden)
+
         dloss_da_hidden = dloss_dz_out @ self.W_hidden_output.T # computes ∂L/∂a_hidden = (∂L/∂z_out) * (∂z_out/∂a_hidden) for hidden layer. Instead of computing ∂z_out/∂a_hidden, we used (W_hidden_output)^T
         da_hidden_dz_hidden = sigmoid_derivative(self.a_hidden) # computes ∂a_hidden/∂z_hidden for hidden layer
         dloss_dz_hidden = dloss_da_hidden * da_hidden_dz_hidden # computes ∂L/∂z_hidden = (∂L/∂a_hidden) * (∂a_hidden/∂z_hidden) for hidden layer, NOTE: element wise multiplication of two matrices (column vectors) are done here, not matrix multiplication
 
-        self.dloss_dW_input_hidden = X.T @ dloss_dz_hidden  # computes ∂L/∂W_input_hidden
+        self.dloss_dW_input_hidden = X.T @ dloss_dz_hidden  # computes ∂L/∂W_input_hidden = (∂L/∂z_hidden) * (∂z_hidden/∂W_input_hidden)
         self.dloss_db_hidden = np.sum(dloss_dz_hidden, axis=0, keepdims=True) # computes ∂L/∂b_hidden
+        '''
+        NOTE : 
+            In line 171, Why is W_hidden_output.T used instead of ∂z_out/∂a_hidden ?
+            Solution: same case for line 116
+            
+            In line 175, Why is X.T used instead of ∂z_hidden/∂W_input_hidden ?
+            Solution: same case for line 116
+            
+            In line 176, ∂loss/∂b_hidden = np.sum(dloss_dz_hidden, axis=0, keepdims=True) ?
+            Solution same case for line 117
+        '''
         #--------------------------------------------
 
         #-----------Gradient Descent part------------
@@ -149,7 +214,6 @@ class NeuralNetwork:
 
             # Forward pass on validation set
             val_output = self.forward_propagation(X_val)
-            #val_loss = mean_squared_error(y_val, val_output)
             val_loss = binary_cross_entropy(y_val, val_output)
 
             # model performance evaluation on validation set
@@ -159,9 +223,9 @@ class NeuralNetwork:
 
             if epoch % 1000 == 0:
                 print(f"Epoch {epoch}:")
-                print(f"  Train Loss     : {train_loss:.4f}   Val Loss: {val_loss:.4f}")
+                print(f"  Train Loss: {train_loss:.4f}   Val Loss: {val_loss:.4f}")
                 print(f"  Train Precision: {train_precision:.4f}   Val Precision: {val_precision:.4f}")
-                print(f"  Train F1 Score : {train_f1:.4f}   Val F1: {val_f1:.4f}")
+                print(f"  Train F1 Score: {train_f1:.4f}   Val F1: {val_f1:.4f}")
                 print(f"  Gradient Norm: {self.get_gradient_norms():.4f}")
                 # If total_norm becomes very large (e.g. thousands or millions), that's a sign of exploding gradients.
 
