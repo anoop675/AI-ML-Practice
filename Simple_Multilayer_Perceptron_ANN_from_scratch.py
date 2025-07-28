@@ -262,6 +262,13 @@ class NeuralNetwork:
 
     # returns L2 norm (Euclidean norm) of all the model's gradients combined, to know how large the gradient updates are at the current step.
     # Lp norm = ||x||p = (sum(|x|^p)^(1/p). For a Euclidean norm, p = 2 (L2 norm). NOTE: x is a vector of gradient
+    '''
+    The gradient norm (typically the L2 norm) reflects the overall magnitude of the parameter updates.
+    If:
+        Gradient norm is very close to 0, then gradients are vanishing, which means very little learning.
+        Gradient norm tends to infinity, then gradients are explodingm which means unstable learning.
+        Gradient norm in a moderate range (e.g., 0.01 – 10), means training is likely stable.
+    '''
     def get_gradient_norms(self):
         list_of_gradients = [
             self.dloss_dW_input_hidden,
