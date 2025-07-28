@@ -268,6 +268,11 @@ class NeuralNetwork:
         Gradient norm is very close to 0, then gradients are vanishing, which means very little learning.
         Gradient norm tends to infinity, then gradients are explodingm which means unstable learning.
         Gradient norm in a moderate range (e.g., 0.01 – 10), means training is likely stable.
+
+    If you're training a neural network and plot the gradient norm per epoch:
+        A flat line near zero, means vanishing gradients, means your weights aren't updating much.
+        A line that shoots up exponentially, means exploding gradients, means your weights are blowing up.
+        A smooth, slowly decreasing line, means good training dynamics.
     '''
     def get_gradient_norms(self):
         list_of_gradients = [
