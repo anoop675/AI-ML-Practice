@@ -1,10 +1,29 @@
 """
 Implementation of deep neural network (with single hidden layer), to make it capable of identifying any 5 bits with first and last bits as 1
-NOTE: This ∂L/∂ŷ should be read like (Loss gradient w.r.t output from output layer). Likewise for others
+>>> NOTE: This ∂L/∂ŷ should be read like (Loss gradient w.r.t output from output layer). Likewise for others
 
-NOTE: Convergence generally refers to the point where the model's performance (often measured by loss) stops improving significantly or reaches a stable state during training
+>>> NOTE: Convergence generally refers to the point where the model's performance (often measured by loss) stops improving significantly or reaches a stable state during training
 
-Types of Training modes (for this implementation we are using Batch Gradient Descent)
+>>> NOTE: Xavier initialization, also known as Glorot initialization, is used to initialize the weights in a neural network to prevent vanishing or exploding gradients, 
+especially in deep networks with many layers. It aims to maintain a similar variance of activations across layers during both forward and backward propagation, which helps stabilize training. 
+1. The Problem: Vanishing/Exploding Gradients
+In deep neural networks, during backpropagation, gradients can become very small (vanishing) or very large (exploding) as they are passed through multiple layers.
+This can significantly slow down or even prevent learning, as the updates to the weights become negligible or too drastic. 
+(To know if the gradients are updating very small (vanishing) or very large (exploding), check the measure of the total gradient norm after every update (epoch)). 
+This problem is often worsened by certain activation functions, like sigmoid and tanh, which can compress the signal. 
+2. Xavier Initialization's Solution
+Xavier initialization addresses this by carefully scaling the weights based on the number of input and output connections to each layer. 
+The goal is to keep the variance of the activations (and thus the gradients) roughly the same across each layer. 
+This ensures that the signal doesn't shrink or blow up as it propagates through the network. 
+3. How it Works
+Xavier initialization typically draws the initial weights from a normal distribution with a mean of 0 and a standard deviation that depends on the number of input and output units of a layer. 
+The formula for the standard deviation often involves the square root of 2 divided by the sum of the number of inputs and outputs to the layer. 
+There are also uniform distributions used, where the weights are drawn from a range based on the number of inputs and outputs. 
+4. Why it's important for sigmoid/tanh
+Xavier initialization is particularly helpful when using activation functions like sigmoid and tanh, as they can be sensitive to the scale of the inputs. 
+By keeping the variance of activations relatively constant, Xavier initialization helps these activation functions operate in their more sensitive regions, where they can effectively learn. 
+
+>>> Types of Training modes (for this implementation we are using Batch Gradient Descent)
 | Type                       | Description                                    | Pros                            | Cons                          |
 | -------------------------- | ---------------------------------------------- | ------------------------------- | ----------------------------- |
 | **Batch Gradient Descent** | Train on **entire dataset** in each epoch      | Stable gradients, deterministic | Slow for large datasets       |
@@ -77,9 +96,15 @@ class NeuralNetwork:
 
         # Initializing weights between each layer
         self.W_input_hidden = np.random.randn(self.d, self.n) * 0.1
+        # Use Xavier (Glorot) Weight Initilization for better scaling in deep neural networks
+        #limit_for_W_input_hidden = np.sqrt(6 / (self.d + self.n)) #Xavier initilization formula (for sigmoid/tanh)
+        #self.W_input_hidden = np.random.uniform(-limit_for_W_input_hidden, limit_for_W_input_hidden, (self.d, self.n))
+
+        
         self.W_hidden_output = np.random.randn(self.n, self.m) * 0.1
-        # self.W_input_hidden = np.random.rand(self.d, self.n)
-        # self.W_hidden_output = np.random.rand(self.n, self.m)
+        # Use Xavier (Glorot) Weight Initilization for better scaling in deep neural networks
+        #limit_for_W_hidden_output = np.sqrt(6 / (self.n + self.m)) #Xavier initilization formula (for sigmoid/tanh)
+        #self.W_hidden_output = np.random.uniform(-limit_for_W_hidden_output, limit_for_W_hidden_output, (self.n, self.m))
 
         # Initializing biases for each layer
         self.b_hidden = np.zeros((1, self.n))
