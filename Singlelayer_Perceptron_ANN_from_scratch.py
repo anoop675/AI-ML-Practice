@@ -62,8 +62,8 @@ from sklearn.metrics import precision_score, f1_score
 def sigmoid(x): # performs sigmoid function on all values at once in vector
     return 1 / (1 + np.exp(-x))
 
-def sigmoid_derivative(x): # performs derivative on all values at once (outputs of sigmoid functions) in vector
-    return x * (1 - x)
+def sigmoid_derivative(sig_x): # performs derivative on all values at once (outputs of sigmoid functions) in vector
+    return sig_x * (1 - sig_x) # NOTE: each value in sig_x are outputs of a sigmoid function
 
 # Loss (Cost) function used is MSE (Mean Squared Error) => sum[(y - ŷ)^2] / n
 def mean_squared_error(y_actual, y_predicted): # y_actual and y_predicted are vectors
