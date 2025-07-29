@@ -45,7 +45,6 @@ class NeuralNetwork:
   def get_parameters(self):
     return self.list_of_weight_matrices, self.list_of_bias_vectors
 
-
   def forward_propagation(self, X):
     self.z_values = [] # z_values stores the pre-activation (intermediate) outputs from each layer
     self.a_values = [X] # a_values stores the activation outputs from each layer
@@ -54,6 +53,7 @@ class NeuralNetwork:
     a = X
     for W, b in zip(self.list_of_weight_matrices, self.list_of_bias_vectors):
       z = a @ W + b
+      print(z.shape)
       a = sigmoid(z)
       self.z_values.append(z)
       self.a_values.append(a)
@@ -181,7 +181,7 @@ if __name__ == "__main__":
 
   y = np.array([1 if row[0] == 1 and row[-1] == 1 else 0 for row in X])
 
-  layer_sizes = [5, 4, 1] #E.g. [5,4,1] means 5 neurons in input layer, 4 neurons for single hidden layer, 1 neuron for output layer
+  layer_sizes = [5, 4, 2, 1] #E.g. [5,4,1] means 5 neurons in input layer, 4 neurons for single hidden layer, 1 neuron for output layer
 
   nn = NeuralNetwork(layer_sizes=layer_sizes, learning_rate=0.1) # Considering a Single layer perceptron for now
 
