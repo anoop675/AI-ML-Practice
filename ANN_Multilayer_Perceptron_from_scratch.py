@@ -77,10 +77,12 @@ class NeuralNetwork:
         self.dloss_dW[l] = a_prev.T @ dloss_dz_out
         self.dloss_db[l] = np.sum(dloss_dz_out, axis=0, keepdims=True)
 
-        if l != 0:  # Don't compute dloss_dz_out for input layer
+        if l != 0:  
+          # Don't compute the gradient of the loss with respect to the input layer activations (dloss_dz_out for input layer), 
+          # because input neurons don’t have weights or biases to update, they are just the raw inputs (X).
           dloss_da = dloss_dz_out @ self.list_of_weight_matrices[l].T
           da_dz = sigmoid_derivative(self.a_values[l])
-          dloss_dz = dloss_da * da_dz
+          dloss_dz_out = dloss_da * da_dz
     #------------------------------------------------------------------
 
     #---------------------Gradient Descent part------------------------
@@ -207,4 +209,4 @@ if __name__ == "__main__":
       y_pred = nn.predict([t])[0][0]
       print(f"Input: {t} -> ")
       print(f"yes with conf={y_pred:.2f}" if (y_pred >= 0.5) else f"no with conf={1 - y_pred:.2f}")
-    
+
