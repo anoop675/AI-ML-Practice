@@ -1,3 +1,11 @@
+"""
+Implementation of Sentiment Analysis of IDMb Movie Reviews with a Custom Neural Network
+Developed an end-to-end sentiment analysis solution for classifying IMDb movie reviews as positive or negative
+This project's core involved implementing a Multi-Layer Perceptron (MLP) Neural Network entirely from scratch in Python
+The pipeline integrated robust natural language processing (NLP) for text preprocessing, encompassing cleaning and advanced linguistic analysis using spaCy for efficient tokenization, lemmatization, and stop word removal
+Processed text was then transformed into numerical features using TF-IDF (Term Frequency-Inverse Document Frequency), preparing the data for the custom-built model
+Model training involved optimizing the custom MLP using mini-batch gradient descent, with performance monitored across training, validation, and test datasets
+"""
 import os
 import re
 import time
@@ -85,10 +93,20 @@ class NeuralNetwork:
     self.list_of_weight_matrices = [] #list of weight matrices between the layers
     self.list_of_bias_vectors = [] #list of bias vectors for each layer
 
-    #Initializing weights using Xavier weight initialization (as sigmoid activation is going to be used in network)
-    for l in range(len(self.layer_sizes) - 1): # for 'l' layers, there will be 'l-1' weight matrices
-      #Using Xavier weight initialization for each of the weights
-      limit = np.sqrt(6 / (self.layer_sizes[l] + self.layer_sizes[l+1]))
+    for l in range(len(self.layer_sizes) - 1):
+      # For hidden layers (using ReLU), use He initialization
+      # For the output layer (using Sigmoid), Xavier is more appropriate, but He can also work reasonably well.
+      # A common practice is to use He for all layers if ReLU is prevalent, or
+      # be more precise and use He for ReLU layers and Xavier for Sigmoid/Tanh.
+      # For simplicity and effectiveness with your current setup:
+      
+      # He Initialization for layers leading to ReLU activations
+      if l < len(self.layer_sizes) - 2: # All hidden layers
+          limit = np.sqrt(6 / self.layer_sizes[l]) 
+      else: # Output layer (leading to Sigmoid)
+          # Xavier Initialization (Glorot Uniform) for the output layer
+          limit = np.sqrt(6 / (self.layer_sizes[l] + self.layer_sizes[l+1])) 
+          
       weight_matrix = np.random.uniform(-limit, limit, (self.layer_sizes[l], self.layer_sizes[l+1]))
       self.list_of_weight_matrices.append(weight_matrix)
 
@@ -114,26 +132,26 @@ class NeuralNetwork:
 
   # Loss function
   def binary_cross_entropy(self, y_true, y_pred, eps=1e-10):
-      # Clip predictions to prevent log(0) or log(1) issues
-      y_pred = np.clip(y_pred, eps, 1 - eps)
-      # Calculate average BCE over the batch
+      y_pred = np.clip(y_pred, eps, 1 - eps) # Clip predictions to prevent log(0) or log(1) issues
       return -np.mean(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
 
   # Derivative of Loss function w.r.t. predictions a_out aka y_pred
   def binary_cross_entropy_derivative(self, y_true, y_pred, eps=1e-10):
       y_pred = np.clip(y_pred, eps, 1 - eps)
-      # This is the derivative dL/d(y_pred) for BCE
       return (y_pred - y_true) / (y_pred * (1 - y_pred))
-
-  def forward_propagation(self, X):
+  #                                                            0 1 2 3
+  def forward_propagation(self, X):  #E.g. self.layer_sizes = [8,5,4,1]
     self.z_values = [] # z_values stores the pre-activation (intermediate) outputs from each layer
     self.a_values = [X] # a_values stores the activation outputs from each layer
     # NOTE: There are actually no activations used in the input layer, but inorder to maintain consistency (i.e. to avoid a_values[0] to be None),
     # we consider the activation outputs of the input layer (a_values[0]) as the input (X)
     a = X
-    for W, b in zip(self.list_of_weight_matrices, self.list_of_bias_vectors):
+    for l, (W, b) in enumerate(zip(self.list_of_weight_matrices, self.list_of_bias_vectors)): # when l == 0, that means we are in the first hidden layer, not the input layer
       z = a @ W + b
-      a = self.sigmoid(z)
+      if l < len(self.layer_sizes) - 2:
+        a = self.relu(z) #use ReLU for hidden layers
+      else:
+        a = self.sigmoid(z) #use sigmoid for output layer
       self.z_values.append(z)
       self.a_values.append(a)
 
@@ -160,7 +178,7 @@ class NeuralNetwork:
           # Don't compute the gradient of the loss with respect to the input layer activations (dloss_dz_out for input layer), 
           # because input neurons don’t have weights or biases to update, they are just the raw inputs (X).
           dloss_da = dloss_dz_out @ self.list_of_weight_matrices[l].T
-          da_dz = self.sigmoid_derivative(self.a_values[l])
+          da_dz = self.relu_derivative(self.a_values[l])
           dloss_dz_out = dloss_da * da_dz
     #------------------------------------------------------------------
 
@@ -249,15 +267,12 @@ if __name__ == "__main__":
   #print(df.shape) #(50000, 2)
 
   # Now, preprocessing the texts from dataset
-  lemmatizer = None
-  stopwords_set = None
   print("Preprocessing texts...")
   #df['processed_text'] = df['text'].apply(clean_text)
   #df['processed_text'] = df['processed_text'].apply(tokenize_and_lemmantize_text)
 
   # With spaCy based processing (much faster than NLTK)
-  # You can still use multiprocessing with spaCy, but spaCy's nlp.pipe is also very efficient
-  # and designed for large datasets.
+  # You can still use multiprocessing with spaCy, but spaCy's nlp.pipe is also very efficient and designed for large datasets.
   processed_texts = []
   # nlp.pipe processes texts in batches, which is efficient
   for doc in nlp.pipe(df['text'].apply(clean_text), batch_size=1000, n_process=cpu_count()):
@@ -276,6 +291,7 @@ if __name__ == "__main__":
   X_temp, X_test, y_temp, y_test = train_test_split(
       df['processed_text'], df['sentiment'], test_size=0.15, random_state=42, stratify=df['sentiment']
   )
+  X_test_duplicate = X_test
   # splitting the 85% of train+validation set into 15% for validation set and 15% for test set
   X_train, X_val, y_train, y_val = train_test_split(
       X_temp, y_temp, test_size=0.17, random_state=42, stratify=y_temp
@@ -316,7 +332,7 @@ if __name__ == "__main__":
   nn = NeuralNetwork(layer_sizes=[n_inputs, 256, 128, 1], learning_rate=0.001)
 
   print("Model training initiated...")
-  nn.train(X_train_vec, y_train, X_val_vec, y_val, epochs=50, batch_size=64)
+  nn.train(X_train_vec, y_train, X_val_vec, y_val, epochs=70, batch_size=64)
   print("Model training completed.")
 
   #list_of_weight_matrices, list_of_bias_vectors = nn.get_parameters()
@@ -325,6 +341,6 @@ if __name__ == "__main__":
   #  print(f"Learned biases for layer #{l+1}: \n", list_of_bias_vectors[l])
 
   print("Predictions:\n")
-  for t in X_test_vec:
-      y_pred = nn.predict([t])
-      print(f"Input: {t} --> Sentiment: {'positive' if y_pred == 1 else 'negative'}")
+  for i in range(len(X_test_vec)):
+      y_pred = nn.predict(X_test_vec[i].reshape(1, -1))
+      print(f"Review: {X_test_duplicate.iloc[i]}, Actual Sentiment: {y_test[i][0]}, Predicted Sentiment: {'positive' if y_pred > 0.5 else 'negative'}")
