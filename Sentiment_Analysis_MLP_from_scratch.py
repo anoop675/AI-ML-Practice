@@ -86,7 +86,6 @@ class NeuralNetwork:
       # For the output layer (using Sigmoid), Xavier is more appropriate, but He can also work reasonably well.
       # A common practice is to use He for all layers if ReLU is prevalent, or
       # be more precise and use He for ReLU layers and Xavier for Sigmoid/Tanh.
-      # For simplicity and effectiveness with your current setup:
 
       # He Initialization for layers leading to ReLU activations
       if l < len(self.layer_sizes) - 2: # All hidden layers
